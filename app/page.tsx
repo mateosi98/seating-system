@@ -1,101 +1,449 @@
-import Image from "next/image";
+"use client"
 
-export default function Home() {
-  return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-8 row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-semibold">
-              app/page.tsx
-            </code>
-            .
-          </li>
-          <li>Save and see your changes instantly.</li>
-        </ol>
+import { useState, useMemo, useEffect } from "react"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import { ScrollArea } from "@/components/ui/scroll-area"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { invitees, type Invitee } from "../data/invitees"
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:min-w-44"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
-        </div>
-      </main>
-      <footer className="row-start-3 flex gap-6 flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
-    </div>
-  );
+interface Table {
+  id: number | string
+  shape: "circle" | "square"
+  guests: Invitee[]
+  capacity: number
 }
+
+const initialTables: Table[] = [
+    { id: 1, shape: "square", guests: [], capacity:8},
+    { id: 2, shape: "square", guests: [], capacity:10},
+    { id: 3, shape: "circle", guests: [], capacity:8},
+    { id: 4, shape: "square", guests: [], capacity:8},
+    { id: 5, shape: "circle", guests: [], capacity:8},
+    { id: 6, shape: "square", guests: [], capacity:10},
+    { id: 7, shape: "circle", guests: [], capacity:10},
+    { id: 8, shape: "square", guests: [], capacity:8},
+    { id: 9, shape: "circle", guests: [], capacity:10},
+    { id: 10, shape: "square", guests: [], capacity:8},
+    { id: 11, shape: "circle", guests: [], capacity:8},
+    { id: 12, shape: "circle", guests: [], capacity:8},
+    { id: 13, shape: "square", guests: [], capacity:10},
+    { id: 14, shape: "circle", guests: [], capacity:10},
+    { id: 15, shape: "square", guests: [], capacity:8},
+    { id: 16, shape: "circle", guests: [], capacity:10},
+    { id: 17, shape: "square", guests: [], capacity:8},
+    { id: 18, shape: "square", guests: [], capacity:8},
+    { id: 19, shape: "square", guests: [], capacity:10},
+    { id: 20, shape: "circle", guests: [], capacity:8},
+    { id: 21, shape: "square", guests: [], capacity:8},
+    { id: 22, shape: "circle", guests: [], capacity:8},
+    { id: 'Novixs', shape: "circle", guests: [], capacity:10},
+  ]
+
+  const saveToLocalStorage = (tables: Table[], unallocatedInvitees: Invitee[]) => {
+    if (typeof window !== "undefined") {
+      localStorage.setItem("seatingChartTables", JSON.stringify(tables))
+      localStorage.setItem("seatingChartUnallocated", JSON.stringify(unallocatedInvitees))
+    }
+  }
+  
+  const loadFromLocalStorage = (): { tables: Table[]; unallocatedInvitees: Invitee[] } | null => {
+    if (typeof window === "undefined") return null
+  
+    const tablesJson = localStorage.getItem("seatingChartTables")
+    const unallocatedJson = localStorage.getItem("seatingChartUnallocated")
+  
+    if (tablesJson && unallocatedJson) {
+      return {
+        tables: JSON.parse(tablesJson),
+        unallocatedInvitees: JSON.parse(unallocatedJson),
+      }
+    }
+  
+    return null
+  }
+  
+  export default function SeatingChart() {
+    const [tables, setTables] = useState<Table[]>(initialTables)
+    const [unallocatedInvitees, setUnallocatedInvitees] = useState<Invitee[]>(invitees)
+    const [selectedTable, setSelectedTable] = useState<Table | null>(null)
+    const [searchQuery, setSearchQuery] = useState("")
+    const [tableSearchQuery, setTableSearchQuery] = useState("")
+  
+    useEffect(() => {
+      const savedData = loadFromLocalStorage()
+      if (savedData) {
+        setTables(savedData.tables)
+        setUnallocatedInvitees(savedData.unallocatedInvitees)
+      }
+    }, [])
+
+const allocateInvitee = (invitee: Invitee, tableId: number | string) => {
+  const newTables = tables.map((table) =>
+  table.id === tableId && table.guests.length < table.capacity
+    ? { ...table, guests: [...table.guests, invitee] }
+    : table,
+    )
+    const newUnallocatedInvitees = unallocatedInvitees.filter((i) => i.id !== invitee.id)
+
+    setTables(newTables)
+    setUnallocatedInvitees(newUnallocatedInvitees)
+    saveToLocalStorage(newTables, newUnallocatedInvitees)
+  }
+
+
+  const deallocateInvitee = (invitee: Invitee, tableId: number) => {
+    const newTables = tables.map((table) =>
+        table.id === tableId ? { ...table, guests: table.guests.filter((g) => g.id !== invitee.id) } : table,
+        )
+        const newUnallocatedInvitees = [...unallocatedInvitees, invitee]
+    
+        setTables(newTables)
+        setUnallocatedInvitees(newUnallocatedInvitees)
+        saveToLocalStorage(newTables, newUnallocatedInvitees)
+      }
+
+  const clearSavedData = () => {
+    if (typeof window !== "undefined") {
+        localStorage.removeItem("seatingChartTables")
+        localStorage.removeItem("seatingChartUnallocated")
+
+    }
+    setTables(initialTables)
+    setUnallocatedInvitees(invitees)
+  }
+
+  const searchResults = useMemo(() => {
+    if (!searchQuery) return []
+
+    const results: { invitee: Invitee; tableId: number | string | null }[] = []
+
+    // Search in unallocated invitees
+    unallocatedInvitees.forEach((invitee) => {
+      if (invitee.name.toLowerCase().includes(searchQuery.toLowerCase())) {
+        results.push({ invitee, tableId: null })
+      }
+    })
+
+    // Search in allocated invitees
+    tables.forEach((table) => {
+      table.guests.forEach((invitee) => {
+        if (invitee.name.toLowerCase().includes(searchQuery.toLowerCase())) {
+          results.push({ invitee, tableId: table.id })
+        }
+      })
+    })
+
+    return results
+  }, [searchQuery, tables, unallocatedInvitees])
+
+  const filteredTableGuests = useMemo(() => {
+    if (!selectedTable) return []
+    return selectedTable.guests.filter((guest) => guest.name.toLowerCase().includes(tableSearchQuery.toLowerCase()))
+  }, [selectedTable, tableSearchQuery])
+
+  const filteredUnallocatedInvitees = useMemo(() => {
+    return unallocatedInvitees.filter((invitee) => invitee.name.toLowerCase().includes(tableSearchQuery.toLowerCase()))
+  }, [unallocatedInvitees, tableSearchQuery])
+
+  const generateCSV = () => {
+    let csvContent = "Table,Guest Name\n"
+
+    tables.forEach((table) => {
+      if (table.guests.length > 0) {
+        table.guests.forEach((guest) => {
+          csvContent += `${table.id},${guest.name}\n`
+        })
+      } else {
+        csvContent += `${table.id},No guests assigned\n`
+      }
+    })
+
+    unallocatedInvitees.forEach((invitee) => {
+      csvContent += `Unallocated,${invitee.name}\n`
+    })
+
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement("a")
+    link.setAttribute("href", url)
+    link.setAttribute("download", "seating_chart.csv")
+    link.style.visibility = "hidden"
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+  }
+
+  return (
+    <div className="mx-auto max-w-4xl p-4">
+      <Input
+        type="text"
+        placeholder="Search invitee..."
+        value={searchQuery}
+        onChange={(e) => setSearchQuery(e.target.value)}
+        className="mb-4"
+      />
+
+      {searchResults.length > 0 && (
+        <div className="mb-4 p-4 border rounded-md bg-muted">
+          <h3 className="font-semibold mb-2">Search Results:</h3>
+          {searchResults.map(({ invitee, tableId }) => (
+            <div key={invitee.id} className="flex justify-between items-center mb-2">
+              <span>{invitee.name}</span>
+              <span>{tableId ? `Table ${tableId}` : "Unallocated"}</span>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <div className="grid grid-cols-5 gap-4">
+        {/* Row 1 */}
+        <TableShape
+          table={tables[0]}
+          onClick={setSelectedTable}
+          highlight={searchResults.some((r) => r.tableId === tables[0].id)}
+        />
+        <TableShape
+          table={tables[5]}
+          onClick={setSelectedTable}
+          highlight={searchResults.some((r) => r.tableId === tables[5].id)}
+        />
+        <div className="invisible" />
+        <TableShape
+          table={tables[12]}
+          onClick={setSelectedTable}
+          highlight={searchResults.some((r) => r.tableId === tables[12].id)}
+        />
+        <TableShape
+          table={tables[17]}
+          onClick={setSelectedTable}
+          highlight={searchResults.some((r) => r.tableId === tables[17].id)}
+        />
+
+        {/* Row 2 */}
+        <TableShape
+          table={tables[1]}
+          onClick={setSelectedTable}
+          highlight={searchResults.some((r) => r.tableId === tables[1].id)}
+        />
+        <TableShape
+          table={tables[6]}
+          onClick={setSelectedTable}
+          highlight={searchResults.some((r) => r.tableId === tables[6].id)}
+        />
+        <div className="invisible" />
+        <TableShape
+          table={tables[13]}
+          onClick={setSelectedTable}
+          highlight={searchResults.some((r) => r.tableId === tables[13].id)}
+        />
+        <TableShape
+          table={tables[18]}
+          onClick={setSelectedTable}
+          highlight={searchResults.some((r) => r.tableId === tables[18].id)}
+        />
+
+        {/* Row 3 */}
+        <TableShape
+          table={tables[2]}
+          onClick={setSelectedTable}
+          highlight={searchResults.some((r) => r.tableId === tables[2].id)}
+        />
+        <TableShape
+          table={tables[7]}
+          onClick={setSelectedTable}
+          highlight={searchResults.some((r) => r.tableId === tables[7].id)}
+        />
+        <TableShape
+          table={tables[10]}
+          onClick={setSelectedTable}
+          highlight={searchResults.some((r) => r.tableId === tables[10].id)}
+        />
+        <TableShape
+          table={tables[14]}
+          onClick={setSelectedTable}
+          highlight={searchResults.some((r) => r.tableId === tables[14].id)}
+        />
+        <TableShape
+          table={tables[19]}
+          onClick={setSelectedTable}
+          highlight={searchResults.some((r) => r.tableId === tables[19].id)}
+        />
+
+        {/* Row 4 */}
+        <TableShape
+          table={tables[3]}
+          onClick={setSelectedTable}
+          highlight={searchResults.some((r) => r.tableId === tables[3].id)}
+        />
+        <TableShape
+          table={tables[8]}
+          onClick={setSelectedTable}
+          highlight={searchResults.some((r) => r.tableId === tables[8].id)}
+        />
+        <TableShape
+          table={tables[11]}
+          onClick={setSelectedTable}
+          highlight={searchResults.some((r) => r.tableId === tables[11].id)}
+        />
+        <TableShape
+          table={tables[15]}
+          onClick={setSelectedTable}
+          highlight={searchResults.some((r) => r.tableId === tables[15].id)}
+        />
+        <TableShape
+          table={tables[20]}
+          onClick={setSelectedTable}
+          highlight={searchResults.some((r) => r.tableId === tables[20].id)}
+        />
+
+        {/* Row 5 */}
+        <TableShape
+          table={tables[4]}
+          onClick={setSelectedTable}
+          highlight={searchResults.some((r) => r.tableId === tables[4].id)}
+        />
+        <TableShape
+          table={tables[9]}
+          onClick={setSelectedTable}
+          highlight={searchResults.some((r) => r.tableId === tables[9].id)}
+        />
+        <TableShape
+          table={tables[22]}
+          onClick={setSelectedTable}
+          highlight={searchResults.some((r) => r.tableId === tables[22].id)}
+        />
+        <TableShape
+          table={tables[16]}
+          onClick={setSelectedTable}
+          highlight={searchResults.some((r) => r.tableId === tables[16].id)}
+        />
+        <TableShape
+          table={tables[21]}
+          onClick={setSelectedTable}
+          highlight={searchResults.some((r) => r.tableId === tables[21].id)}
+        />
+
+      </div>
+
+      <Dialog
+        open={!!selectedTable}
+        onOpenChange={(open) => {
+          if (!open) {
+            setSelectedTable(null)
+            setTableSearchQuery("")
+          }
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Table {selectedTable?.id} Guests</DialogTitle>
+          </DialogHeader>
+          <Input
+            type="text"
+            placeholder="Search guests..."
+            value={tableSearchQuery}
+            onChange={(e) => setTableSearchQuery(e.target.value)}
+            className="mb-4"
+          />
+          <ScrollArea className="h-[300px] pr-4">
+            <div className="space-y-4">
+              {filteredTableGuests.map((guest) => (
+                <div key={guest.id} className="flex items-center justify-between">
+                  <span>{guest.name}</span>
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    onClick={() => selectedTable && deallocateInvitee(guest, selectedTable.id)}
+                  >
+                    Remove
+                  </Button>
+                </div>
+              ))}
+            </div>
+          </ScrollArea>
+          <DialogHeader>
+            <DialogTitle>Unallocated Guests</DialogTitle>
+          </DialogHeader>
+          <ScrollArea className="h-[300px] pr-4">
+            <div className="space-y-4">
+              {filteredUnallocatedInvitees.map((invitee) => (
+                <div key={invitee.id} className="flex items-center justify-between">
+                  <span>{invitee.name}</span>
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => selectedTable && allocateInvitee(invitee, selectedTable.id)}
+                    disabled={selectedTable && selectedTable.guests.length >= selectedTable.capacity}
+                  >
+                    Add to Table
+                  </Button>
+                </div>
+              ))}
+            </div>
+          </ScrollArea>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog>
+        <DialogTrigger asChild>
+          <Button className="mt-8 w-full">View All Tables</Button>
+        </DialogTrigger>
+        <DialogContent className="max-w-3xl">
+          <DialogHeader>
+            <DialogTitle>Table Assignments</DialogTitle>
+          </DialogHeader>
+          <ScrollArea className="h-[400px] pr-4">
+            <div className="space-y-4">
+              {tables.map((table) => (
+                <div key={table.id} className="flex items-start justify-between">
+                  <div>
+                    <h4 className="font-medium">Table {table.id}</h4>
+                    <p className="text-sm text-muted-foreground">
+                      {table.guests.length ? table.guests.map((g) => g.name).join(", ") : "No guests assigned"}
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </ScrollArea>
+        </DialogContent>
+      </Dialog>
+      <div className="mt-4 flex space-x-4">
+        <Button onClick={generateCSV} className="flex-1">
+          Download CSV
+        </Button>
+      </div>
+    </div>
+  )
+}
+
+function TableShape({
+  table,
+  onClick,
+  highlight,
+}: {
+  table: Table
+  onClick: (table: Table) => void
+  highlight: boolean
+}) {
+  const commonClasses =
+    "h-20 flex items-center justify-center border-2 border-primary hover:bg-primary/10 cursor-pointer transition-colors"
+
+  return (
+    <div
+      onClick={() => onClick(table)}
+      className={`${commonClasses} ${table.shape === "circle" ? "rounded-full" : "rounded-md"} ${
+        highlight ? "bg-yellow-200" : ""
+      }`}
+    >
+      <div className="text-center">
+        <div>{table.id}</div>
+        <div className="text-xs text-muted-foreground">
+          {table.guests.length}/{table.capacity} guests
+        </div>
+      </div>
+    </div>
+  )
+}
+
