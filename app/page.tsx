@@ -1,6 +1,8 @@
 "use client"
 
-import { useState, useMemo, useEffect } from "react"
+import type React from "react"
+
+import { useState, useMemo, useEffect, useRef } from "react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Button } from "@/components/ui/button"
@@ -69,6 +71,8 @@ const initialTables: Table[] = [
     const [selectedTable, setSelectedTable] = useState<Table | null>(null)
     const [searchQuery, setSearchQuery] = useState("")
     const [tableSearchQuery, setTableSearchQuery] = useState("")
+    
+    const fileInputRef = useRef<HTMLInputElement>(null)
   
     useEffect(() => {
       const savedData = loadFromLocalStorage()
@@ -102,6 +106,13 @@ const allocateInvitee = (invitee: Invitee, tableId: number | string) => {
         setUnallocatedInvitees(newUnallocatedInvitees)
         saveToLocalStorage(newTables, newUnallocatedInvitees)
       }
+  
+  const updateTableCapacity = (tableId: number | string, newCapacity: number) => {
+    const newTables = tables.map((table) => (table.id === tableId ? { ...table, capacity: newCapacity } : table))
+        setTables(newTables)
+        saveToLocalStorage(newTables, unallocatedInvitees)
+      }
+    
 
   const clearSavedData = () => {
     if (typeof window !== "undefined") {
@@ -172,6 +183,42 @@ const allocateInvitee = (invitee: Invitee, tableId: number | string) => {
     document.body.appendChild(link)
     link.click()
     document.body.removeChild(link)
+  }
+
+  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (file) {
+      const reader = new FileReader()
+      reader.onload = (e) => {
+        const content = e.target?.result as string
+        const lines = content.split("\n")
+        const newTables = [...initialTables]
+        const newUnallocatedInvitees: Invitee[] = []
+
+        lines.slice(1).forEach((line) => {
+          const [tableId, guestName] = line.split(",")
+          if (tableId && guestName) {
+            const trimmedTableId = tableId.trim()
+            const trimmedGuestName = guestName.trim()
+
+            if (trimmedTableId === "Unallocated") {
+              newUnallocatedInvitees.push({ id: `u${newUnallocatedInvitees.length}`, name: trimmedGuestName })
+            } else {
+              const tableIndex = newTables.findIndex((t) => t.id.toString() === trimmedTableId)
+              if (tableIndex !== -1 && trimmedGuestName !== "No guests assigned") {
+                const guest = { id: `g${newTables[tableIndex].guests.length}`, name: trimmedGuestName }
+                newTables[tableIndex].guests.push(guest)
+              }
+            }
+          }
+        })
+
+        setTables(newTables)
+        setUnallocatedInvitees(newUnallocatedInvitees)
+        saveToLocalStorage(newTables, newUnallocatedInvitees)
+      }
+      reader.readAsText(file)
+    }
   }
 
   return (
@@ -339,6 +386,20 @@ const allocateInvitee = (invitee: Invitee, tableId: number | string) => {
           <DialogHeader>
             <DialogTitle>Table {selectedTable?.id} Guests</DialogTitle>
           </DialogHeader>
+          <div className="flex items-center space-x-2 mb-4">
+            <label htmlFor="capacity" className="text-sm font-medium">
+              Capacity:
+            </label>
+            <Input
+              id="capacity"
+              type="number"
+              value={selectedTable?.capacity}
+              onChange={(e) =>
+                selectedTable && updateTableCapacity(selectedTable.id, Number.parseInt(e.target.value, 10))
+              }
+              className="w-20"
+            />
+          </div>
           <Input
             type="text"
             placeholder="Search guests..."
@@ -413,6 +474,10 @@ const allocateInvitee = (invitee: Invitee, tableId: number | string) => {
         <Button onClick={generateCSV} className="flex-1">
           Download CSV
         </Button>
+        <Button onClick={() => fileInputRef.current?.click()} className="flex-1">
+          Upload CSV
+        </Button>
+        <input type="file" ref={fileInputRef} onChange={handleFileUpload} accept=".csv" className="hidden" />
       </div>
     </div>
   )
